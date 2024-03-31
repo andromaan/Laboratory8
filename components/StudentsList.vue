@@ -1,5 +1,5 @@
 <script setup lang="js">
-import { ref, computed } from 'vue'
+import {ref, computed, watch} from 'vue'
 
 
 const students = [
@@ -122,6 +122,9 @@ const rows = computed(() => {
   return filteredRows.value.slice((page.value - 1) * pageCount, page.value * pageCount)
 })
 
+watch(q, ()=> {
+  page.value = 1;
+});
 
 </script>
 

@@ -1,4 +1,4 @@
-<script lang="js">
+<script lang="ts">
 import { defineComponent } from 'vue';
 import Products from "~/components/Products.vue";
 export default defineComponent({

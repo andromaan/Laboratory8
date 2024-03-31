@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 interface Product {
   id: number;
@@ -22,7 +22,8 @@ const columns = [
   { key: 'thumbnail', label: 'Thumbnail' }
 ];
 
-const { data } = await useFetch<any>('https://dummyjson.com/products');
+const { pending, data } = await useLazyAsyncData<any>('rows', () => $fetch('https://dummyjson.com/products'))
+
 const products: Product[] = data.value.products;
 
 const q = ref('');
@@ -31,7 +32,7 @@ const filteredRows = computed(() => {
     return products;
   }
 
-  return products.filter((product: Product) => { // Вказуємо тип параметра явно
+  return products.filter((product: Product) => {
     return Object.values(product).some((value) => {
       return String(value).toLowerCase().includes(q.value.toLowerCase());
     });
@@ -44,16 +45,22 @@ const pageCount = 3;
 const rows = computed(() => {
   return filteredRows.value.slice((page.value - 1) * pageCount, page.value * pageCount);
 });
+
+
+watch(q, ()=>{
+  page.value = 1;
+});
+
 </script>
 
 <template>
   <div>
     <div class="flex justify-center px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
-      <UInput class="w-1/4" v-model="q" placeholder="Filter product..."/>
+      <UInput class="w-1/4" v-model="q" placeholder="Filter product..." oninput="firstPage"/>
     </div>
-    <UTable :rows="rows" :columns="columns" >
+    <UTable :rows="rows" :columns="columns">
       <template #thumbnail-data="{row}">
-          <img :src="row.thumbnail" alt="" class="h-[100px] w-[100px]">
+        <img :src="row.thumbnail" alt="" class="h-[100px] w-[100px]">
       </template>
       <template #description-data="{row}">
         <div class="text-wrap">{{ row.description }}</div>
