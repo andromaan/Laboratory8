@@ -1,38 +1,30 @@
 <script setup lang="ts">
+useHead({
+  title: 'ProductsList'
+});
 import { ref, computed, watch } from 'vue';
 
-interface Product {
-  id: number;
-  title: string;
-  description: string;
-  price: number;
-  rating: number;
-  brand: string;
-  category: string;
-  thumbnail: string;
-}
-
 const columns = [
-  { key: 'title', label: 'Title' },
-  { key: 'description', label: 'Description' },
-  { key: 'price', label: 'Price' },
-  { key: 'rating', label: 'Rating' },
-  { key: 'brand', label: 'Brand' },
-  { key: 'category', label: 'Category' },
+  { key: 'title', label: 'Title', sortable: true },
+  { key: 'description', label: 'Description', sortable: true },
+  { key: 'price', label: 'Price', sortable: true },
+  { key: 'rating', label: 'Rating', sortable: true },
+  { key: 'brand', label: 'Brand', sortable: true },
+  { key: 'category', label: 'Category', sortable: true },
   { key: 'thumbnail', label: 'Thumbnail' }
 ];
 
-const { pending, data } = await useLazyAsyncData<any>('rows', () => $fetch('https://dummyjson.com/products'))
+const { data } = await useFetch<any>('https://dummyjson.com/products');
 
-const products: Product[] = data.value.products;
+const products = ref(data.value.products);
 
 const q = ref('');
 const filteredRows = computed(() => {
   if (!q.value) {
-    return products;
+    return products.value;
   }
 
-  return products.filter((product: Product) => {
+  return products.value.filter((product) => {
     return Object.values(product).some((value) => {
       return String(value).toLowerCase().includes(q.value.toLowerCase());
     });
@@ -42,10 +34,40 @@ const filteredRows = computed(() => {
 const page = ref(1);
 const pageCount = 3;
 
-const rows = computed(() => {
-  return filteredRows.value.slice((page.value - 1) * pageCount, page.value * pageCount);
-});
+const sort = ref({ column: '', direction: 'asc' as const })
+const sortedRows = computed(() => {
+  const sortedProducts = [...products.value]
+  const { column, direction } = sort.value
 
+  if (column && direction) {
+    sortedProducts.sort((a, b) => {
+      const aValue = a[column]
+      const bValue = b[column]
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1
+      return 0
+    })
+  }
+
+  return sortedProducts
+})
+
+const rows = computed(() => {
+  let filteredProducts = [...sortedRows.value]
+
+  if (q.value) {
+    filteredProducts = filteredProducts.filter(product => {
+      return Object.values(product).some(value => {
+        return String(value).toLowerCase().includes(q.value.toLowerCase())
+      })
+    })
+  }
+
+  const startIndex = (page.value - 1) * pageCount
+  const endIndex = startIndex + pageCount
+
+  return filteredProducts.slice(startIndex, endIndex)
+})
 
 watch(q, ()=>{
   page.value = 1;
@@ -54,11 +76,12 @@ watch(q, ()=>{
 </script>
 
 <template>
+  <title>Products</title>
   <div>
     <div class="flex justify-center px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
       <UInput class="w-1/4" v-model="q" placeholder="Filter product..." oninput="firstPage"/>
     </div>
-    <UTable :rows="rows" :columns="columns">
+    <UTable :rows="rows" :columns="columns" v-model:sort="sort" sort-mode="manual">
       <template #thumbnail-data="{row}">
         <img :src="row.thumbnail" alt="" class="h-[100px] w-[100px]">
       </template>

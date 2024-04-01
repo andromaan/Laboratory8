@@ -1,6 +1,14 @@
-<script setup lang="js">
-import {ref, computed, watch} from 'vue'
+<script setup lang="ts">
+useHead({
+  title: 'StudentsList'
+});
 
+const columns = [
+  { key: 'id', label: 'Id' },
+  { key: 'name', label: 'Name', sortable: true },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'group', label: 'Group', sortable: true }
+];
 
 const students = [
   {
@@ -101,8 +109,45 @@ const students = [
   },
 ];
 
-const q = ref('')
+const sort = ref({ column: 'title', direction: 'asc' as const })
+const sortedRows = computed(() => {
+  const sortedProducts = [...students]
+  const { column, direction } = sort.value
 
+  if (column && direction) {
+    sortedProducts.sort((a, b) => {
+      const aValue = a[column]
+      const bValue = b[column]
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1
+      return 0
+    })
+  }
+
+  return sortedProducts
+})
+
+const page = ref(1);
+const pageCount = 4;
+
+const rows = computed(() => {
+  let filteredProducts = [...sortedRows.value]
+
+  if (q.value) {
+    filteredProducts = filteredProducts.filter(product => {
+      return Object.values(product).some(value => {
+        return String(value).toLowerCase().includes(q.value.toLowerCase())
+      })
+    })
+  }
+
+  const startIndex = (page.value - 1) * pageCount
+  const endIndex = startIndex + pageCount
+
+  return filteredProducts.slice(startIndex, endIndex)
+})
+
+const q = ref('');
 const filteredRows = computed(() => {
   if (!q.value) {
     return students
@@ -113,17 +158,11 @@ const filteredRows = computed(() => {
       return String(value).toLowerCase().includes(q.value.toLowerCase())
     })
   })
-})
+});
 
-const page = ref(1)
-const pageCount = 4
 
-const rows = computed(() => {
-  return filteredRows.value.slice((page.value - 1) * pageCount, page.value * pageCount)
-})
-
-watch(q, ()=> {
-  page.value = 1;
+watch(q, () => {
+  page.value = 1
 });
 
 </script>
@@ -131,13 +170,13 @@ watch(q, ()=> {
 <template>
   <div>
     <div class="flex justify-center px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
-      <UInput class="w-1/4" v-model="q" placeholder="Filter people..." />
+      <UInput class="w-1/4" v-model="q" placeholder="Filter people..."/>
     </div>
 
-    <UTable :rows="rows"/>
+    <UTable :rows="rows" , :columns="columns" v-model:sort="sort"/>
 
     <div class="flex justify-center px-3 py-3.5 border-t border-gray-200 dark:border-gray-700">
-      <UPagination v-model="page" :page-count="pageCount" :total="filteredRows.length" />
+      <UPagination v-model="page" :page-count="pageCount" :total="filteredRows.length"/>
     </div>
   </div>
 </template>
