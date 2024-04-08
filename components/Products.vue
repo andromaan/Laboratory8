@@ -36,15 +36,13 @@ const pageCount = 3;
 
 const sort = ref({ column: '', direction: 'asc' as const })
 const sortedRows = computed(() => {
-  const sortedProducts = [...products.value]
   const { column, direction } = sort.value
+  const sortedProducts = [...products.value]
 
   if (column && direction) {
     sortedProducts.sort((a, b) => {
-      const aValue = a[column]
-      const bValue = b[column]
-      if (aValue < bValue) return direction === 'asc' ? -1 : 1
-      if (aValue > bValue) return direction === 'asc' ? 1 : -1
+      if (a[column] < b[column]) return direction === 'asc' ? -1 : 1
+      if (a[column] > b[column]) return direction === 'asc' ? 1 : -1
       return 0
     })
   }
