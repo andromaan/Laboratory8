@@ -1,95 +1,112 @@
-<template>
-
-  <div class="container">
-
-    <div class="flex justify-center">
-
-      <div class="w-full">
-
-        <nav class="navbar bg-gray-100">
-
-          <a href="/admin/blog/posts/create" class="">Додати</a>
-
-        </nav>
-
-        <div class="card">
-
-          <div class="card-body">
-
-            <table class="table table-auto">
-
-              <thead>
-
-              <tr>
-
-                <th>#</th>
-
-                <th>Автор</th>
-
-                <th>Категорія</th>
-
-                <th>Заголовок</th>
-
-                <th>Дата публікації</th>
-
-              </tr>
-
-              </thead>
-
-              <tbody>
-
-              <tr v-for="post in posts">
-
-                <td>{{ post.id }}</td>
-
-                <td>{{ post.user.name }}</td>
-
-                <td>{{ post.category.title }}</td>
-
-                <td><a :href="'/admin/blog/posts/' + post.id + '/edit'">{{ post.title }}</a></td>
-
-                <td>{{ post.published_at }}
-
-                </td>
-
-              </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</template>
-
-
-
 <script setup lang="ts">
+useHead({
+  title: 'PostsList'
+});
+import { ref, computed, watch } from 'vue';
 
-const posts = ref([]);
+const columns = [
+  { key: 'id', label: '#', sortable: true },
+  { key: 'author', label: 'Author', sortable: true },
+  { key: 'category', label: 'Category', sortable: true },
+  { key: 'title', label: 'Title', sortable: true },
+  { key: 'publishedAt', label: 'Published At', sortable: true },
+  { key: 'actions', label: 'Actions' }
+];
 
-    const getPosts = () => {
+const { data } = await useFetch<any>('http://127.0.0.1:8000/api/blog/posts');
+const posts = ref(data.value);
 
-  $fetch('http://127.0.0.1:8000/api/blog/posts')
+const q = ref('');
+const filteredRows = computed(() => {
+  if (!q.value) {
+    return posts.value;
+  }
 
-      .then(response => {
+  return posts.value.filter((post) => {
+    return Object.values(post).some((value) => {
+      return String(value).toLowerCase().includes(q.value.toLowerCase());
+    });
+  });
+});
 
-        console.log(response);
+const page = ref(1);
+const pageCount = 7;
 
-        posts.value = response;
+const sort = ref({ column: '', direction: 'asc' as const });
+const sortedRows = computed(() => {
+  const { column, direction } = sort.value;
+  const sortedPosts = [...posts.value];
 
+  if (column && direction) {
+    sortedPosts.sort((a, b) => {
+      const aValue = getColumnValue(a, column);
+      const bValue = getColumnValue(b, column);
+
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  return sortedPosts;
+});
+
+function getColumnValue(post: any, column: string) {
+  switch (column) {
+    case 'category':
+      return post.category.title;
+    case 'publishedAt':
+      return post.published_at;
+    default:
+      return post[column];
+  }
+}
+
+const rows = computed(() => {
+  let filteredPosts = [...sortedRows.value];
+
+  if (q.value) {
+    filteredPosts = filteredPosts.filter(post => {
+      return Object.values(post).some(value => {
+        return String(value).toLowerCase().includes(q.value.toLowerCase());
       });
+    });
+  }
 
-};
+  const startIndex = (page.value - 1) * pageCount;
+  const endIndex = startIndex + pageCount;
 
-getPosts();
+  return filteredPosts.slice(startIndex, endIndex);
+});
 
+watch(q, () => {
+  page.value = 1;
+});
 </script>
+
+<template>
+  <title>Posts</title>
+  <div>
+    <div class="flex justify-center px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
+      <UInput class="w-1/4" v-model="q" placeholder="Filter posts..." oninput="firstPage"/>
+    </div>
+    <UTable :rows="rows" :columns="columns" v-model:sort="sort" sort-mode="manual">
+      <template #author-data="{ row }">
+        {{ row.user.name }}
+      </template>
+      <template #category-data="{ row }">
+        {{ row.category.title }}
+      </template>
+      <template #publishedAt-data="{ row }">
+        {{ row.published_at }}
+      </template>
+      <template #actions-data="{ row }">
+        <a :href="'/admin/blog/posts/' + row.id + '/edit'">Edit</a>
+      </template>
+    </UTable>
+
+    <div class="flex justify-center px-3 py-3.5 border-t border-gray-200 dark:border-gray-700">
+      <UPagination v-model="page" :page-count="pageCount" :total="filteredRows.length"/>
+    </div>
+  </div>
+</template>
