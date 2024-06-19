@@ -3,6 +3,7 @@ useHead({
   title: 'PostsList'
 });
 import { ref, computed, watch } from 'vue';
+import axios from 'axios';
 
 const columns = [
   { key: 'id', label: '#', sortable: true },
@@ -82,13 +83,29 @@ const rows = computed(() => {
 watch(q, () => {
   page.value = 1;
 });
+
+const deletePost = (post : any) => {
+  if (confirm(`Ви впевнені, що хочете видалити статтю '${post.title}'?`)) {
+    axios.delete(`http://127.0.0.1:8000/api/blog/posts/${post.id}`)
+        .then(res => {
+          console.log(res);
+          alert('Пост видалено!');
+          posts.value = posts.value.filter(p => p.id !== post.id);
+        })
+        .catch(error => {
+          console.error(error);
+          alert('Не вдалось видалити пост');
+        });
+  }
+};
 </script>
 
 <template>
   <title>Posts</title>
   <div>
-    <div class="flex justify-center px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex justify-around px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
       <UInput class="w-1/4" v-model="q" placeholder="Filter posts..." oninput="firstPage"/>
+      <a href="posts/create"  class="inline-flex items-center font-medium rounded-md text-lg px-5 py-1 bg-green-400 text-white ring-1 ring-inset ring-green-400 ring-opacity-25 dark:ring-opacity-25">Додати</a>
     </div>
     <UTable :rows="rows" :columns="columns" v-model:sort="sort" sort-mode="manual">
       <template #author-data="{ row }">
@@ -97,11 +114,18 @@ watch(q, () => {
       <template #category-data="{ row }">
         {{ row.category.title }}
       </template>
+      <template #title-data="{ row }">
+        <a :href="'posts/' + row.id">{{ row.title }}</a>
+      </template>
       <template #publishedAt-data="{ row }">
-        {{ row.published_at }}
+        {{ row.published_at ?? "N/A" }}
       </template>
       <template #actions-data="{ row }">
-        <a :href="'/admin/blog/posts/' + row.id + '/edit'">Edit</a>
+        <div class="flex gap-4">
+          <a :href="'posts/update/' + row.id">Edit</a>
+          <a href='#' @click="deletePost(row)">Delete</a>
+        </div>
+
       </template>
     </UTable>
 

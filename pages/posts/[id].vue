@@ -12,6 +12,7 @@
               <p class="text-black dark:text-white"><strong>Автор:</strong> {{ post.user.name }}</p>
               <p class="text-black dark:text-white"><strong>Категорія:</strong> {{ post.category.title }}</p>
               <p class="text-black dark:text-white"><strong>Дата публікації:</strong> {{ post.published_at }}</p>
+              <p class="text-black dark:text-white"><strong>Опубліковано:</strong> {{ post.is_published ? "Так" : "Ні" }}</p>
             </div>
             <div class="prose" v-html="post.content"></div>
           </div>
